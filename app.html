@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Student Grid</title>
+  <style>
+    table {
+      width: 100%;
+      border-collapse: collapse;
+    }
+    th, td {
+      padding: 8px;
+      text-align: left;
+      border-bottom: 1px solid #ddd;
+    }
+  </style>
+</head>
+<body>
+  <h1>Student Grid</h1>
+  
+  <label for="filter">Filter by Grade:</label>
+  <select id="filter" onchange="filterStudents()">
+    <option value="">All</option>
+    <option value="A">A</option>
+    <option value="B">B</option>
+    <option value="C">C</option>
+  </select>
+
+  <table id="studentTable">
+    <thead>
+      <tr>
+        <th>ID</th>
+        <th>Name</th>
+        <th>Age</th>
+        <th>Grade</th>
+      </tr>
+    </thead>
+    <tbody id="studentTableBody"></tbody>
+  </table>
+
+  <div id="pagination">
+    <button onclick="previousPage()">Previous</button>
+    <button onclick="nextPage()">Next</button>
+  </div>
+
+  <script>
+    const pageSize = 10;
+    let currentPage = 1;
+    let filteredGrade = "";
+
+    // Function to fetch student data from the backend API
+    async function fetchStudents() {
+      const response = await fetch(`/students?page=${currentPage}&size=${pageSize}`);
+      const data = await response.json();
+      return data;
+    }
+
+    // Function to filter students based on grade
+    async function filterStudents() {
+      const filterSelect = document.getElementById("filter");
+      const filterValue = filterSelect.value;
+
+      filteredGrade = filterValue;
+      currentPage = 1;
+      if (filteredGrade !== "") {
+        const response = await fetch(`/students/filter?grade=${filteredGrade}`);
+        const data = await response.json();
+        displayStudents(data);
+        displayPagination(data.length);
+      } else {
+        fetchAndDisplayStudents();
+      }
+    }
+
+    // Function to display paginated students
+    function displayStudents(students) {
+      const studentTableBody = document.getElementById("studentTableBody");
+      studentTableBody.innerHTML = "";
+
+      students.forEach((student) => {
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${student.id}</td>
+          <td>${student.name}</td>
+          <td>${student.age}</td>
+          <td>${student.grade}</td>
+        `;
+        studentTableBody.appendChild(row);
+      });
+    }
+
+    // Function to display pagination buttons
+    function displayPagination(totalStudents) {
+      const totalPages = Math.ceil(totalStudents / pageSize);
+      const pagination = document.getElementById("pagination");
+      pagination.innerHTML = "";
+
+      const previousButton = document.createElement("button");
+      previousButton.innerText = "Previous";
+      previousButton.addEventListener("click", () => {
+        previousPage();
+      });
+      pagination.appendChild(previousButton);
+
+      const nextButton = document.createElement("button");
+      nextButton.innerText = "Next";
+      nextButton.addEventListener("click", () => {
+        nextPage();
+      });
+      pagination.appendChild(nextButton);
+
+      const currentPageSpan = document.createElement("span");
+      currentPageSpan.innerText = `Page ${currentPage}`;
+      pagination.appendChild(currentPageSpan);
+    }
+
+    // Function to navigate to the previous page
+    function previousPage() {
+      if (currentPage > 1) {
+        currentPage--;
+        if (filteredGrade !== "") {
+          filterStudents();
+        } else {
+          fetchAndDisplayStudents();
+        }
+      }
+    }
+
+    // Function to navigate to the next page
+    function nextPage() {
+      currentPage++;
+      if (filteredGrade !== "") {
+        filterStudents();
+      } else {
+        fetchAndDisplayStudents();
+      }
+    }
+
+    // Function to fetch and display students on initial load
+    async function fetchAndDisplayStudents() {
+      const students = await fetchStudents();
+      displayStudents(students);
+
+      const response = await fetch("/students");
+      const allStudents = await response.json();
+      displayPagination(allStudents.length);
+    }
+
+    fetchAndDisplayStudents();
+  </script>
+</body>
+</html>
